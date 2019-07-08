@@ -1,9 +1,13 @@
-#Load 2 R-packages we need:
+#Install 2 R-packages we need:
 if (!require(readxl)) library(readxl) # load that package if not done already
 if (!require(tidyverse)) library(tidyverse) # load that package if not done already
 
+#Load these packages into your working environment
 library("readxl")
 library("tidyverse")
+
+#IMPORTANT:
+#YOUR SAMPLE_ID (I named it CNcode) should be consistent across all your spreadsheets.
 
 #Specify path to folder where you store youre CN spreadsheets and list them all:
 files <- list.files(path = "C:/Users/BlueCarbon/Documents/0.Deakin Uni/R/BCL_R/CN_DATA_12jun19",
@@ -24,7 +28,7 @@ tbl1 <- sapply(files,
 #Create function to export data from sheet = 2 (Element%)
 ReadCN <- function(x) read_xlsx (path = x,sheet = 2,skip = 7, range = cell_cols("C:D"))
 
-#Export "Element%" data from all files in your folder:
+#Export "Element%" data from all files in your folder using sapply:
 tbl2 <- sapply(files, 
                ReadCN, simplify=FALSE) %>% 
   bind_rows(.id = "id2")
@@ -44,7 +48,8 @@ CN_DATA_clean <- CN_DATA %>%
 
 #Check for duplicates:
 anyDuplicated(CN_DATA_clean$CNCode)#Should be 0!!!
-
+#If not 0, some samples are dupliacted,
+#You have to decide what to do with duplicates (e.g., average them, remove them)
 
 #Merge new CN data with your MASTER file:
 MASTER_DATA <- read_csv("CN.csv")
