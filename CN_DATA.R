@@ -1,4 +1,4 @@
-#Install 2 R-packages we need:
+#Install 2 R-packages we need if not on your comp by now:
 if (!require(readxl)) library(readxl) # load that package if not done already
 if (!require(tidyverse)) library(tidyverse) # load that package if not done already
 
@@ -7,7 +7,7 @@ library("readxl")
 library("tidyverse")
 
 #IMPORTANT:
-#YOUR SAMPLE_ID (I named it CNcode) should be consistent across all your spreadsheets.
+#YOUR SAMPLE_ID (I named it CNCode) should be consistent across all your spreadsheets.
 
 #Specify path to folder where you store youre CN spreadsheets and list them all:
 files <- list.files(path = "C:/Users/BlueCarbon/Documents/0.Deakin Uni/R/BCL_R/CN_DATA_12jun19",
