@@ -43,3 +43,17 @@ net=networkPlot(NetMatrix, normalize="association", weighted=T, n = 30,
 DF <- dominance(results, k = 100)
 DF
 
+#Blue Carbon bibliometrix:======
+B <- readFiles("BC.txt") #Read in records
+BC <- convert2df(B, dbsource = "isi") #convert to data.frame
+
+length(BC$UT)#500 = Maxium allowed to export off Web of Science at one time
+
+#Draw a network analysis on Blue Carbon keywords:
+NetMatrix <- biblioNetwork(BC, analysis = "co-occurrences",
+                           network = "keywords", sep = ";")
+net=networkPlot(NetMatrix, normalize="association", weighted=T, n = 30,
+                Title = "Keywords associated with Blue Carbon",
+                type = "fruchterman",
+                size=T,edgesize = 5,labelsize=0.9)
+
