@@ -1,19 +1,28 @@
-#Read data in:
+#Libraries needed:
 library(tidyverse)
 library(lubridate)
 
 #LOAD & VISUZALIZE CO2 DATA off one UGGA chamber=======
 #Subset only pre-defined start and stop time (off our field notes).
-ugga_data <- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1) %>%
+chamber1 <- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1) %>%
   mutate(DateTime = as.POSIXct(strptime(Time,"%d/%m/%Y %H:%M:%S"))) %>%
   filter(DateTime >= '2019-07-03 08:08:08' & #filter time interval recorded in the field
            DateTime <= '2019-07-03 08:14:49' ) %>% #Time stop here.
   mutate ( Site =as.factor("STON_T3_1996_HIGH")) %>% #Assign this time interal to a site as per field notes
   mutate ( NumTime = row_number()) %>% #produce numeric values for time to run lm on.
-  mutate (slope = coef(summary(lm (X.CO2._ppm ~ NumTime)))[2,1]) #extract slope from lm
+  mutate (Slope = coef(summary(lm (X.CO2._ppm ~ NumTime)))[2,1]) %>% #extract slope from lm
+  mutate ( Chamber_Volume.m3 = 0.0353250,
+           Chamber_Surface.m2 = 0.07065,
+           ConvertPPM_to_ugm3 = 1798.45,
+           ConvertSec_to_Days = 86400,
+           Gas_Flux = (Slope *ConvertPPM_to_ugm3*86400*Chamber_Volume.m3)/
+             (Chamber_Surface.m2*1000))
+
+chamber1[1,"Gas_Flux"] #CO2 flux (mg m2 day-1)
+ 
 
 #Draw the plot. Look for outliers if any:
-  ggplot(ugga_data, aes(x = NumTime, y = X.CO2._ppm)) + 
+  ggplot(chamber1, aes(x = NumTime, y = X.CO2._ppm)) + 
   geom_point() +
   stat_smooth(method = "lm", col = "red")
 
@@ -56,12 +65,14 @@ grid.arrange(u1,u2) #Very small difference.
 #########################################################################
 #Below is Work in progress = TO DO a LOOP:======
 #Load StopStart Data (off field notes):
-StopStart <- read.csv("StonStartStop.csv") %>%
-  mutate(TimeStart = as.POSIXct(strptime(start,"%d/%m/%Y %H:%M:%S"))) %>%
-  mutate(TimeStop = as.POSIXct(strptime(stop,"%d/%m/%Y %H:%M:%S"))) %>%
-  mutate (CutStart = TimeStart - 1)
+StartStop <- read.csv("StonStartStop.csv")
 
-u <- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1) %>% #Flux Data
+clean_data<- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1) %>%
+  separate ( Time, into =  c("bla","bla2", "date","time"), sep = " ") %>%
+  select(date, time, X.CH4._ppm, X.CH4.d_ppm, X.CO2._ppm, X.CO2.d_ppm,
+         GasT_C, AmbT_C, RD0_us, RD1_us, Fit_Flag, MIU_DESC) %>%
+  separate(time, into = c("DayHMS","Msec"), sep = "[.]",extra = "merge") %>%
+u <- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1)# %>% #Flux Data
   mutate(DateTime = as.POSIXct(strptime(Time,"%d/%m/%Y %H:%M:%S")))
 
 # Assign site category:
