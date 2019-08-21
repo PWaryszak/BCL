@@ -1,10 +1,10 @@
-#Richmond River DATA:====
+#LOAD Richmond River DATA:=====
 library(tidyverse)
 setwd("~/00DeakinUni/R/BCL_R/BCL")
 aa <- read.csv("RR_aboveground.csv")
 bb <- read.csv("RR_belowground.csv")
 
-#Compute mean +- SE for belowground C-Stock:
+#Compute mean +- SE for belowground C-Stock:==============
 belowSum <- select(bb, Site, Site_Core, Carbon_stock_in_section_Mg_Cha)%>%
   group_by(Site_Core) %>% #to sum total Carbon Stock per core.
   mutate(TotalPerCore = sum (Carbon_stock_in_section_Mg_Cha)) %>%
@@ -32,7 +32,7 @@ aboveSum <- select (aa, Site, Total_Aboveground_Biomass_kg_100m2) %>%
 ab <- rbind (aboveSum,belowSum) %>%
   mutate(AV= ifelse(Stock =="Aboveground",AV,AV*-1))#turn belowground negative
 
-#Draw a figure:
+#Draw a figure:=======
 MyBreaks <- c(-300, -200,-100, -50, 0, 50, 100, 200,300 ,400,500)
 
 ggplot(ab, aes(x=Site, y=AV, fill = Stock))+
@@ -40,7 +40,7 @@ ggplot(ab, aes(x=Site, y=AV, fill = Stock))+
   geom_errorbar( aes(ymin= AV+SE, ymax = AV-SE), width=.4)+
   geom_hline(yintercept=0)+
   scale_y_continuous(breaks = MyBreaks,labels = abs(MyBreaks))+ #abs to remove negative values on y-axis below 0
-  scale_fill_manual(values = c("lightblue","darkgreen"))+
+  scale_fill_manual(values = c("darkgreen","lightblue"))+
   xlab("")+ylab("Organic Carbon Stock (Mg/ha)")+
   ggtitle("Richmond River Project")+
   theme_classic()+
@@ -51,3 +51,16 @@ ggplot(ab, aes(x=Site, y=AV, fill = Stock))+
          legend.text = element_text(size = 16),
          legend.title = element_text(face = "italic",size=16),
          plot.title = element_text(lineheight=1.2, face="bold",size=20))
+
+#Histogram:=======
+bbb <- select(bb,Depth_Range, Site, Site_Core, Carbon_stock_in_section_Mg_Cha)%>%
+  group_by(Site_Core) %>% #to sum total Carbon Stock per core.
+  mutate(TotalPerCore = sum (Carbon_stock_in_section_Mg_Cha)) 
+  
+ggplot(bb, aes(Carbon_stock_in_section_Mg_Cha, fill = Treatment))+
+  geom_histogram() +facet_grid(Depth_Range~.)+ theme_bw()+
+  theme(axis.text.x=element_text(vjust=0.5,size=12, angle = 90),
+        axis.text.y=element_text(size=12),
+        axis.title.y=element_text(size=20),
+        legend.position = "bottom")
+
