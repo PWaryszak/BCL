@@ -1,5 +1,8 @@
 #LOAD Richmond River DATA:=====
 library(tidyverse)
+library(gridExtra)
+library(broom)
+
 setwd("~/00DeakinUni/R/BCL_R/BCL")
 aa <- read.csv("RR_aboveground.csv")
 bb <- read.csv("RR_belowground.csv")
@@ -125,3 +128,59 @@ range (MaxDepth$Depth_to)#38 110
 length (MaxDepth[ MaxDepth$Depth_to < 50,]) # 6 cores were below 50 cm
 100 - (6/48 * 100) #87.5% of cores were longer than 50 cm.
 
+
+#Model:=======
+Mangroves <- filter (bb, Treatment != "Saltmarsh natural" ) %>%
+  filter (Depth_to <= 50)
+summary(lm(Carbon_stock_in_section_Mg_Cha ~ Depth_Range+Treatment,
+           Mangroves))
+augment(lm(Carbon_stock_in_section_Mg_Cha ~ Depth_Range+Treatment,
+           Mangroves))
+
+#Corrected for compaction:=========
+CorrectedDepthCarbon <- select(bb, Site,Site_Core, Treatment,Depth_to, Depth_Range,
+                        Site_Core, Carbon_stock_in_section_Mg_Cha,
+                        Lab_Compaction_Correction_Value)%>%
+  filter(Treatment != "Saltmarsh natural") %>%
+  filter(Depth_to <= 50 ) %>%
+  mutate( DepthCorrected = Depth_to / Lab_Compaction_Correction_Value,
+          DepthChange = DepthCorrected-Depth_to,
+          DepthChangePerc = 100-(DepthChange/Depth_to *100), #Percent increase in depth
+          CorrectedCarbonStock = Carbon_stock_in_section_Mg_Cha * DepthChangePerc/100) ##Percent decrease in Carbon Stock when cut at 50cm
+
+CorrectedDepthCarbon
+
+BelowSum50_corrected<- select(CorrectedDepthCarbon, Site, Site_Core,
+                             Carbon_stock_in_section_Mg_Cha,CorrectedCarbonStock)%>%
+  group_by(Site) %>% #to sum total Carbon Stock per core.
+  summarise(AV = mean(CorrectedCarbonStock, na.rm = T),
+            SD = sd(CorrectedCarbonStock),
+            N = length(CorrectedCarbonStock),
+            SE = SD / sqrt(N)) %>%
+  mutate (CarbonStock = "Corrected")
+
+c1<-ggplot(BelowSum50_corrected , aes(x=Site, y=AV, fill = Site))+
+  geom_bar(position="identity", stat="identity")+
+  geom_errorbar( aes(ymin= AV+SE, ymax = AV-SE), width=.4) +
+  theme(legend.position = "none")+
+  scale_y_continuous(limits = c(0,80))+
+  ggtitle("Richmond River Project", subtitle = "CarbonStock = CORRECTED")
+
+
+
+BelowSum50 <- select(CorrectedDepthCarbon, Site,Carbon_stock_in_section_Mg_Cha)%>%
+  group_by(Site) %>%
+  summarise(AV = mean(Carbon_stock_in_section_Mg_Cha, na.rm = T),
+            SD = sd(Carbon_stock_in_section_Mg_Cha),
+            N = length(Carbon_stock_in_section_Mg_Cha),
+            SE = SD / sqrt(N)) %>%
+  mutate (CarbonStock = "Old")
+
+c2<-ggplot(BelowSum50 , aes(x=Site, y=AV, fill =Site))+
+  geom_bar(position="identity", stat="identity")+
+  geom_errorbar( aes(ymin= AV+SE, ymax = AV-SE), width=.4)+
+  theme(legend.position = "none") +
+  scale_y_continuous(limits = c(0,80))+
+  ggtitle("Richmond River Project", subtitle = "CarbonStock = OLD")
+
+grid.arrange(c1,c2)
