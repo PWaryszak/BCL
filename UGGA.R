@@ -1,48 +1,41 @@
 #Libraries needed:
-library(tidyverse)
-library(lubridate)
-#Define your time intervals:
-start <- '2019-07-03 07:55:28'
-stop  <-  '2019-07-03 08:00:28'
+library(tidyverse)#install.packages ("tidyverse")
+library(lubridate)#install.packages ("lubridate")
 
-#Read in gas flux data
-ugga_data <- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1) %>%
-  mutate(Datetime = as.POSIXct(strptime(Time,"%d/%m/%Y %H:%M:%S"))) %>% #Convert Time to POSIXct format:
-  filter(Datetime >= start & Datetime >= stop) #subset the time pre-define time interval
 
-#LOAD & VISUZALIZE CO2 DATA off one UGGA chamber=======
+#COMPUTE EMISSION RATE OFF UGGA txt FILE =====
 #Subset only pre-defined start and stop time (off our field notes).
-chamber1 <- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1) %>%
-  mutate(DateTime = as.POSIXct(strptime(Time,"%d/%m/%Y %H:%M:%S"))) %>%
-  filter(DateTime >= '2019-07-03 08:08:08' & #filter time interval recorded in the field
-           DateTime <= '2019-07-03 08:14:49' ) %>% #Time stop here.
-  mutate ( Site =as.factor("STON_T3_1996_HIGH")) %>% #Assign this time interal to a site as per field notes
-  mutate ( NumTime = row_number()) %>% #produce numeric values for time to run lm on.
+ugga_data <- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1) %>% #Read in gas flux data
+  mutate(Datetime = as.POSIXct(strptime(Time,"%d/%m/%Y %H:%M:%S"))) %>%
+  mutate(Site = ifelse(Datetime>='2019-07-03 08:08:08' & Datetime <='2019-07-03 08:14:49',"SITE1",
+                       ifelse(Datetime >='2019-07-03 08:14:58' & Datetime <='2019-07-03 08:19:59',"SITE2",
+                              "BLANK")))%>%
+  filter (Site != "BLANK") %>% #remove all records in between chambers.  Icalled them BLANK
+  group_by(Site)%>%
+  mutate ( NumTime = seq_along(Site)) %>% #produce numeric values for time to run lm on.
   mutate (Slope = coef(summary(lm (X.CO2._ppm ~ NumTime)))[2,1]) %>% #extract slope from lm
-  mutate ( Chamber_Volume.m3 = 0.0353250,
+  mutate ( Chamber_Volume.m3 = 0.0353250, #This may need change if chamber was flooded
            Chamber_Surface.m2 = 0.07065,
            ConvertPPM_to_ugm3 = 1798.45,
            ConvertSec_to_Days = 86400,
            Gas_Flux = (Slope *ConvertPPM_to_ugm3*86400*Chamber_Volume.m3)/
              (Chamber_Surface.m2*1000))
 
-chamber1[1,"Gas_Flux"] #CO2 flux (mg m2 day-1)
- 
+unique(ugga_data$Gas_Flux)
 
-#Draw the plot. Look for outliers if any:
-  ggplot(chamber1, aes(x = NumTime, y = X.CO2._ppm)) + 
+#Draw the plot for SITE1:
+ggplot(ugga_data[ugga_data$Site=="SITE1",] , aes(x = NumTime, y = X.CO2._ppm)) + 
   geom_point() +
   stat_smooth(method = "lm", col = "red")
 
-
-  
 ###################################################################
-#Look at plots of CO2 vs time ============
+#Look at CO2 emission against two time intervals ============
 library(grid)
 library(gridExtra)
 
 #Points around NumTime = 75 fluctute. Let's cut them out:
-ugga_data_new <- filter(ugga_data, NumTime >= 75)
+ugga_data_old <- filter(ugga_data, Site =="SITE1")
+ugga_data_new <- filter(ugga_data, NumTime >= 75 & Site =="SITE1")
 
 #Compare different plots using this function:
 ggplotRegression <- function (fit) {
@@ -58,52 +51,6 @@ ggplotRegression <- function (fit) {
 }
 
 #Compare plots:
-u1<- ggplotRegression(lm(X.CO2._ppm ~ NumTime, data = ugga_data)) +labs(title = "STON_T3_1996_HIGH")
-u2<- ggplotRegression(lm(X.CO2._ppm ~ NumTime, data = ugga_data_new))+labs(title = "STON_T3_1996_HIGH")
-grid.arrange(u1,u2) #Very small difference.
-
-
-
-
-
-
-
-
-
-#########################################################################
-#Below is Work in progress = TO DO a LOOP:======
-#Load StopStart Data (off field notes):
-StartStop <- read.csv("StonStartStop.csv")
-
-clean_data<- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1) %>%
-  separate ( Time, into =  c("bla","bla2", "date","time"), sep = " ") %>%
-  select(date, time, X.CH4._ppm, X.CH4.d_ppm, X.CO2._ppm, X.CO2.d_ppm,
-         GasT_C, AmbT_C, RD0_us, RD1_us, Fit_Flag, MIU_DESC) %>%
-  separate(time, into = c("DayHMS","Msec"), sep = "[.]",extra = "merge") %>%
-u <- read.delim("gga_2019-07-03_f0000.txt",sep = "," , skip =1)# %>% #Flux Data
-  mutate(DateTime = as.POSIXct(strptime(Time,"%d/%m/%Y %H:%M:%S")))
-
-# Assign site category:
-CutTime <- StopStart$CutStart
-http://r.789695.n4.nabble.com/problem-with-rbind-when-data-frame-contains-an-date-time-variable-quot-POSIXt-quot-quot-POSIXlt-quot-td3312088.htmlcut2 <- StopStart[1,"TimeStop"]
-CutTimes2 <- rbind(CutTime,cut2)
-
-sites <- as.vector(StopStart[1:8, "Site.ID"])
-u$site <- cut(u$DateTime, breaks = CutTimes,
-              labels = sites,
-              include.lowest=T)
-check <- filter(u, site == "STON_1996_T3_HIGH")
-
-#EXAMPLES of one chamber:
-start <- '2019-07-03 08:08:08'
-stop  <- '2019-07-03 08:14:49'
-site <- "STON_T3_1996_HIGH"
-
-CutTime <- function (x) ( 
-  filter(x, DateTime >= start & Datetime <= stop ) 
-
-CutTime (ugga_data)
-
-coef(summary(lm (X.CO2._ppm ~ NumTime, data = z)))[2,1]
-z1 <- mutate ( slope = coef(summary(lm (X.CO2._ppm ~ NumTime, data = z)))[2,1])
-
+u1<- ggplotRegression(lm(X.CO2._ppm ~ NumTime, data = ugga_data_old)) +labs(title = "SITE1_OLD")
+u2<- ggplotRegression(lm(X.CO2._ppm ~ NumTime, data = ugga_data_new))+labs(title = "SITE1_NEW")
+grid.arrange(u1,u2) #Very small difference in R2
