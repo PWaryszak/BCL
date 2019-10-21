@@ -23,43 +23,45 @@ NewDATA$CarbonStock.Mgha_ROUND <- round(NewDATA$CarbonStock.Mgha, 0)
 
 #Analyze  Coastal Veg DATA from Avalon ======
 #Gamma Model:
-CN_gamma <- glmer(C.percent ~ habitat  +DepthRange.cm +
+CN_gamma <- glmer(CarbonStock.Mgha ~ habitat  +DepthRange.cm +
                     (1|core) + (1|site) ,
                   family = Gamma(link = "inverse"), data=NewDATA)
 summary(CN_gamma)
 plot(resid(CN_gamma))
 
 #Linear Model:
-CN_lm <- lm(C.percent ~ habitat  +DepthRange.cm , data = NewDATA)
+CN_lm <- lm(CarbonStock.Mgha ~ habitat  +DepthRange.cm , data = NewDATA)
 summary(CN_lm)
 plot(resid(CN_lm))
 
 #Linear Model on Site effect:
-CN_lm_site <- lm(C.percent ~ site , data = NewDATA)
+CN_lm_site <- lm(CarbonStock.Mgha ~ site , data = NewDATA)
 summary(CN_lm_site)
 plot(resid(CN_lm_site))
 
 #Linear Model on SiteNumber effect:
-CN_lm_siteNum <- lm(C.percent ~ as.factor(SiteNumber) , data = NewDATA)
+CN_lm_siteNum <- lm(CarbonStock.Mgha ~ as.factor(SiteNumber) , data = NewDATA)
 summary(CN_lm_siteNum)
 plot(resid(CN_lm_siteNum))
 
 
 #Log-Linear Model:
-CN_log_lm <- lm(log(C.percent) ~ habitat + DepthRange.cm , data = NewDATA)
+CN_log_lm <- lm(log(CarbonStock.Mgha) ~ habitat + DepthRange.cm , data = NewDATA)
 summary(CN_log_lm)
 plot(resid(CN_log_lm))
 
 #Gaussian glmm distribution:=
-CN_log_lmer1 <- lmer(log(C.percent) ~ habitat  + DepthRange.cm +
-                   (1|SiteNumber) , data=NewDATA)
+CN_log_lmer1 <- lmer(log(CarbonStock.Mgha) ~ habitat  + DepthRange.cm +
+                   (1|SiteNumber)  , data=NewDATA)
 
 summary(CN_log_lmer1)
 plot(resid(CN_log_lmer1))
+#TABLE:
+tab_model(CN_log_lmer1)
 
 
 #Gaussian glmm distribution no depths:=
-CN_log_lmer2 <- lmer(log(C.percent) ~ habitat  +
+CN_log_lmer2 <- lmer(log(CarbonStock.Mgha) ~ habitat  +
                    (1|site) +(1|DepthRange.cm ),
                  data=NewDATA)
 
@@ -67,7 +69,7 @@ CN_log_lmer2 <- lmer(log(C.percent) ~ habitat  +
 
 #Poisson Model:
 range(NewDATA$C_Round )# 0 26
-CN_poisson <- glmer(C_Round  ~ habitat + DepthRange.cm + 
+CN_poisson <- glmer(CarbonStock.Mgha_ROUND  ~ habitat + DepthRange.cm + 
                       (1|core) + (1|site),
                     family = poisson(link="log"), data=NewDATA)
 summary(CN_poisson)
@@ -76,10 +78,6 @@ plot(resid(CN_poisson))
 #Compare all models:
 AIC(CN_poisson,CN_gamma,CN_lm,CN_log_lm, CN_log_lmer1,CN_log_lmer2 )
 
-
-
-#TABLE====
-tab_model(CN_lmer1)
 
 #Analyze MERGED Coastal Veg DATA from Avalon ======
 #Merge top and bottom depthRange.cm into two-level factors. Rationale:
@@ -127,9 +125,9 @@ tab_model(CN_lmer_log2)
 
 
 #Plot by by habitat
-ggplot(NewDATA2, aes(x = habitat, y = CarbonStock.Mgha)) +
+aa <- ggplot(NewDATA, aes(x = habitat, y = CarbonStock.Mgha)) +
   geom_boxplot() +
-  facet_grid(.~ TwoDepths)+ geom_jitter( alpha = 0.4)+
+  facet_grid(.~ DepthRange.cm)+ geom_jitter( alpha = 0.4)+
   ylab("Organic Carbon Stock (Mg/ha)") + xlab("") +
   theme_bw() +
   coord_flip()+
@@ -143,6 +141,29 @@ ggplot(NewDATA2, aes(x = habitat, y = CarbonStock.Mgha)) +
         plot.title = element_text(size = 20, face = "bold", vjust = 0.5),
         strip.background =  element_rect(fill = "white"))
 
+NewDATA3 <- NewDATA %>%
+  group_by(habitat,core) %>%
+  summarise(TotalCarbonStock = sum(CarbonStock.Mgha, na.rm = T))
+  
+a <- ggplot(NewDATA3, aes(x = "Within Each Core", y = TotalCarbonStock)) +
+  geom_boxplot() +
+  facet_grid(.~ habitat)+ geom_jitter( alpha = 0.4)+
+  ylab("Total Carbon Stock (Mg/ha)") + xlab("") +
+  theme_bw() +
+  coord_flip()+
+  ggtitle("Coastal Vegetation (BRP Avalon)")+
+  theme(axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 10),
+        axis.text.y = element_text(size = 16, angle = 90, hjust = 0.5),
+        axis.title.y = element_text(size = 16),
+        legend.position = "none",
+        legend.text = element_text(size = 16),
+        strip.text=element_text(size=16),
+        plot.title = element_text(size = 20, face = "bold", vjust = 0.5),
+        strip.background =  element_rect(fill = "white"))
+library(grid)
+library(gridExtra)
+grid.arrange(aa, a)
 ##############################################################################
 
 #Functions to processs raw CN-data======
