@@ -1,5 +1,4 @@
-#Peter's Research Benchmarking DATA manipulation:
-install.packages(c("tidyverse", "cowplot"))
+#Peter's Research Benchmarking DATA manipulation SECOND GO:====
 library(tidyverse)##Load packages after installing them:
 library(cowplot)
 bench <- read.csv("~/00DeakinUni/R/BCL_R/BCL/bench2.csv")##Load Peter's Research Indices DATA:
@@ -7,17 +6,17 @@ bench <- read.csv("~/00DeakinUni/R/BCL_R/BCL/bench2.csv")##Load Peter's Research
 #Compute Cumulative Sums of Peter's FundsAs_CoLeader:=======
 a <- bench %>% 
   group_by(Year) %>%
-  transform(CumSumFund=cumsum(N),
+  transform(CumSumFund=cumsum(N),#Cumulative Sums of Peter's FundsAs_CoLeader
             CumSumPubs=cumsum(Publications.per.year),
             CumSumCite=cumsum(Citations.per.year)) %>%
   select(Year, CumSumPubs, CumSumCite, CumSumFund) %>%
   mutate(lead = "N")%>%
   as.data.frame
-
+a
 #Compute Cumulative Sums of Peter's FundsAs_ChiefLeader
 b <- bench %>% 
   group_by(Year) %>%
-  transform(CumSumFund=cumsum(Y),
+  transform(CumSumFund=cumsum(Y), #Cumulative Sums of Peter's FundsAs_ChiefLeader
             CumSumPubs=cumsum(Publications.per.year),
             CumSumCite=cumsum(Citations.per.year)) %>%
   select(Year, CumSumPubs, CumSumCite, CumSumFund) %>%
@@ -25,59 +24,64 @@ b <- bench %>%
   as.data.frame
 
 ab <- rbind (a,b)#Bind them
-max(ab$CumSumCite)#2617
-max(ab$CumSumPubs)#120
+ab1 <- filter(ab, Year > 2006)
+ab1$Pubs_Data <- "solid"
+ab1$Cite_Data <- "dotted"
+ab1
+max(ab1$CumSumCite)#2624
+max(ab1$CumSumPubs)#120
 
 #PLOT========
-MyBreaks <- c(2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019)
+#No. of pubs and citations:
+MyBreaks <- c(2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019)
 
-p <- ggplot() +
-  geom_bar(width=0.5, data = ab, aes(x=Year, y=CumSumFund/1000000, fill = lead), position="stack",stat="identity")+
-  scale_fill_manual("CI Leadership:", values = c("Y" ="black" , "N" = "grey"), labels = c("Chief (Lead) Investigator", "Co- Investigator"))+
-  ylab("Research Income  \n (Millions AU$, cumulative)") +xlab("")+
-  geom_line(data = ab, aes(x=Year, y=CumSumPubs/10), stat="identity")+
-  geom_point(data = ab, aes(x=Year, y=CumSumPubs/10), stat="identity") +
-  scale_y_continuous(sec.axis = sec_axis(~.*10, name = "No. of Research Publications \n (cumulative)"))+
-  theme_minimal()+
-  scale_x_continuous(breaks = MyBreaks,labels = abs(MyBreaks), limits = c(2004,2019.4))+
+ main_plot <-  ggplot() +
+    geom_line(data = ab1, aes(x=Year, y=CumSumCite, lty = Cite_Data), stat="identity")+
+    geom_point(data = ab1, aes(x=Year, y=CumSumCite), stat="identity",size = 2) +
+    ylab("\n No. of Citations (cumulative)") +xlab("") +
+  geom_line(data = ab1, aes(x=Year, y=CumSumPubs*15, lty = Pubs_Data), stat="identity")+
+  geom_point(data = ab1, aes(x=Year, y=CumSumPubs*15), stat="identity") +
+  scale_y_continuous(sec.axis = sec_axis(~./15, name = "No. of  Publications (cumulative)"))+
+  scale_linetype_manual( "", values=c( "dotted","solid"),  labels=c("Citations","Publications"))+
+   theme_minimal()+
+  scale_x_continuous(breaks = MyBreaks,labels = abs(MyBreaks), limits = c(2007,2019.4)) +
   theme_classic() +
-  theme(legend.position   = c(0.75,0.9),
-        legend.title = element_blank(),
-        legend.text = element_text(size=14),
-        axis.text.x=element_text(size=14, face = "bold", angle = 45, vjust = 0.5),
-        axis.text.y=element_text(size=14, face = "bold"),
-        axis.title.y=element_text(size=16))
-p
+  theme(legend.position   = c(0.9,0.15),
+        #legend.title = element_blank(),
+        legend.text = element_text(size=14, colour = "black"),
+        axis.text.x=element_text(size=14,  angle = 45, vjust = 0.5, colour = "black"),
+        axis.text.y=element_text(size=14,  colour = "black"),
+        axis.title.y=element_text(size=14, colour = "black"))
+main_plot
 
 
-#Create Inset plot made of citations:
-inset.plot <- ggplot() + 
-  geom_line(data = ab, aes(x=Year, y=CumSumCite),linetype =  "dotted", stat="identity")+
-  geom_point(data = b, aes(x=Year, y=CumSumCite), stat="identity",size = 2) +
-  ylab("No. of Citations")+
-  scale_x_continuous(breaks = MyBreaks,labels = abs(MyBreaks), limits = c(2004,2019.4))+
+#Create Inset plot made of cumulative funds:
+inset.plot2 <- ggplot() + 
+  geom_bar(width=0.5, data = ab1, aes(x=Year, y=CumSumFund/1000000, fill = lead), position="stack" ,stat="identity")+
+  scale_fill_manual("", values = c("Y" ="black" , "N" = "grey"), labels = c("Chief (Lead) Investigator", "Co-Investigator"))+
+  ylab("Research Income  \n (Millions AU$, cumulative)") +xlab("")+
+  scale_x_continuous(breaks = MyBreaks,labels = abs(MyBreaks), limits = c(2006.5,2019.4))+
   theme_classic()+
-    theme(legend.position = "none",
-        axis.text.x=element_text(size=14, face = "bold", angle = 45,vjust = 0.5),
-        axis.text.y=element_text(size=14, face = "bold"),
-        axis.title.y=element_text(size=16) ,
+  theme(legend.position = c(0.25,0.9),
+        legend.title = element_text(size=14, colour = "black"),
+        legend.text = element_text(size=14, colour = "black"),
+        axis.text.x=element_text(size=14,  angle = 45,vjust = 0.5, colour = "black"),
+        axis.text.y=element_text(size=14,  colour = "black"),
+        axis.title.y=element_text(size=14, colour = "black") ,
         axis.title.x=element_blank())
 
-inset.plot
+inset.plot2
 
 #Merge instet.plot and p (main plot) together:
-plot.with.inset <-
+plot.with.inset2 <-
   ggdraw() +
-  draw_plot(p) +
-  draw_plot(inset.plot, x = 0.1, y = .5, width = .5, height = .5)
+  draw_plot(main_plot) +
+  draw_plot(inset.plot2, x = 0.1, y = 0.4, width = .5, height = .6)
 
 #Save the plot with ggsave() and check the output:
-ggsave(filename = "plot.with.inset.png", 
-       plot = plot.with.inset,
+ggsave(filename = "plot.with.inset2.png", 
+       plot = plot.with.inset2,
        width = 32, 
        height = 12,
        units = "cm",
-       dpi = 600)
-
-
-
+       dpi = 2400)
